@@ -151,6 +151,31 @@ check((await call("GET", "/jobs/job_nope")).status === 404, "unknown job -> 404"
   await ok("PUT", `/agents/${buyer.id}/limits`, { maxPerJob: null, maxPerDay: null }, B);
   check((await call("POST", `/jobs/${l2.id}/fund`, { amount: 20 }, B)).status === 200, "clearing limits allows funding");
 }
+// ---- wallet balances + owner signatures ----
+{
+  check((await call("GET", "/wallet/not-a-wallet")).status === 400, "wallet balances with invalid address -> 400");
+  const wb = await call("GET", "/wallet/4mSd9TdP86nnJiZb8SehHcU3bFMkhq64uuFtomsQFPUe");
+  check(wb.status === 200 || wb.status === 502, `wallet balances with valid address -> ${wb.status} (200, or 502 if RPC unreachable)`);
+  const { generateKeyPairSync, sign } = await import("node:crypto");
+  const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  const b58 = (buf: Buffer) => { let n = BigInt("0x" + (buf.toString("hex") || "0")); let out = ""; while (n > 0n) { out = A[Number(n % 58n)] + out; n /= 58n; } for (const x of buf) { if (x === 0) out = "1" + out; else break; } return out; };
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const owner = b58(publicKey.export({ format: "der", type: "spki" }).subarray(-32));
+  const name = "Signed Owner Agent";
+  const msg = `Spawnpad: register agent "${name}" for owner ${owner} at ${new Date().toISOString()}`;
+  const sig = sign(null, Buffer.from(msg), privateKey).toString("base64");
+  const signed = await call("POST", "/agents", { name, ownerWallet: owner, ownerMessage: msg, ownerSignature: sig });
+  check(signed.status === 201 && signed.json?.ownerVerified === true, "signed registration -> ownerVerified true");
+  const tampered = await call("POST", "/agents", { name: "Other Name", ownerWallet: owner, ownerMessage: msg, ownerSignature: sig });
+  check(tampered.status === 400, "signature for a different name -> 400");
+  const badSig = await call("POST", "/agents", { name, ownerWallet: owner, ownerMessage: msg + " ", ownerSignature: sig });
+  check(badSig.status === 400, "tampered message -> 400");
+  const old = `Spawnpad: register agent "${name}" for owner ${owner} at ${new Date(Date.now() - 11 * 60_000).toISOString()}`;
+  const stale = await call("POST", "/agents", { name, ownerWallet: owner, ownerMessage: old, ownerSignature: sign(null, Buffer.from(old), privateKey).toString("base64") });
+  check(stale.status === 400, "signature older than 10 minutes -> 400");
+  const unsigned = await call("POST", "/agents", { name: "Unsigned Owner Agent", ownerWallet: owner });
+  check(unsigned.status === 201 && unsigned.json?.ownerVerified === false, "unsigned registration -> ownerVerified false");
+}
 // ---- balance + withdraw ----
 {
   check((await call("GET", `/agents/${seller.id}/balance`)).status === 401, "balance without key -> 401");

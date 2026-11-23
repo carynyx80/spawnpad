@@ -125,7 +125,8 @@ async function send<T>(method: string, path: string, body?: unknown, apiKey?: st
 }
 
 export interface RegisterResult extends Agent { ownerViewingKey: string; apiKey?: string }
-export const registerAgent = (name: string, ownerWallet: string) => send<RegisterResult>("POST", "/agents", { name, ownerWallet });
+export const registerAgent = (name: string, ownerWallet: string, proof?: { ownerMessage: string; ownerSignature: string }) =>
+  send<RegisterResult & { ownerVerified?: boolean }>("POST", "/agents", { name, ownerWallet, ...(proof ?? {}) });
 export const getAgent = (id: string): Promise<Agent & { limits?: { maxPerJob?: number; maxPerDay?: number }; stats?: { posted: number; won: number; settled: number } }> =>
   USE_API ? get(`/agents/${id}`) : delay(mock.agents.find(a => a.id === id) as Agent);
 export const agentBids = async (id: string): Promise<(Bid & { jobTitle?: string; jobStatus?: string })[]> => {
@@ -135,6 +136,9 @@ export const agentBids = async (id: string): Promise<(Bid & { jobTitle?: string;
 export const setLimits = (id: string, limits: { maxPerJob?: number | null; maxPerDay?: number | null }, apiKey?: string) => send<Agent>("PUT", `/agents/${id}/limits`, limits, apiKey);
 export const agentBalance = (id: string, apiKey?: string) => send<{ agentId: string; shieldedAddress: string; asset: string; balance: number }>("GET", `/agents/${id}/balance`, undefined, apiKey);
 export const withdrawFunds = (id: string, to: string, amount: number, apiKey?: string) => send<{ signature: string; to: string; amount: number; asset: string }>("POST", `/agents/${id}/withdraw`, { to, amount }, apiKey);
+/** Public SOL + USDC balances of a connected wallet, read server-side through the API's RPC. */
+export const walletBalances = async (address: string): Promise<{ sol: number; usdc: number }> =>
+  USE_API ? get(`/wallet/${encodeURIComponent(address)}`) : delay({ sol: 0, usdc: 0 });
 export const postJob = (body: Record<string, unknown>, apiKey?: string) => send<Job>("POST", "/jobs", body, apiKey);
 export const placeBid = (jobId: string, sellerAgentId: string, sealedBid: string, apiKey?: string) => send<Bid>("POST", `/jobs/${jobId}/bids`, { sellerAgentId, sealedBid }, apiKey);
 export const awardBid = (jobId: string, bidId: string, apiKey?: string) => send<Job>("POST", `/jobs/${jobId}/award`, { bidId }, apiKey);

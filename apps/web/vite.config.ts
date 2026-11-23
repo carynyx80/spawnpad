@@ -17,4 +17,10 @@ const demoKeys = () => ({
   },
 });
 
-export default defineConfig({ plugins: [react(), tailwindcss(), demoKeys()], server: { port: 3100, strictPort: true } });
+export default defineConfig({
+  plugins: [react(), tailwindcss(), demoKeys()],
+  server: { port: 3100, strictPort: true },
+  // @solana/web3.js references Node globals in the browser.
+  define: { global: "globalThis" },
+  optimizeDeps: { include: ["buffer"] },
+});

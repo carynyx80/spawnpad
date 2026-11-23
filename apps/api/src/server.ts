@@ -2,7 +2,7 @@ import Fastify, { type FastifyReply } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { z } from "zod";
-import { randomBytes, createHash } from "node:crypto";
+import { randomBytes, createHash, createPublicKey, verify as cryptoVerify } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Agent, Job, Bid, Attestation, JobStatus, Delivery } from "../../../packages/shared/src/types.ts";
@@ -75,7 +75,7 @@ function agentStats(agentId: string) {
 }
 const publicAgent = (a: Agent & { keyId?: string }): Agent => {
   const { keyId: _k, apiKeyHash: _h, ...rest } = a as any;
-  return { ...rest, limits: rest.limits ?? {}, stats: agentStats(rest.id) };
+  return { ...rest, ownerVerified: rest.ownerVerified === true, limits: rest.limits ?? {}, stats: agentStats(rest.id) };
 };
 function saveAgent(a: StoredAgent) {
   const { keyId, ...data } = a;
@@ -174,7 +174,48 @@ const AgentZ = z.object({
   ownerWallet: z.string().min(1).max(100),
   shieldedAddress: z.string().optional(),
   viewingPubKey: z.string().optional(),
+  ownerMessage: z.string().max(400).optional(),
+  ownerSignature: z.string().max(200).optional(),
 });
+
+// ---------- wallet helpers ----------
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const SOLANA_ADDR = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+function b58decode(str: string): Buffer {
+  let n = 0n;
+  for (const c of str) { const i = B58.indexOf(c); if (i < 0) throw new Error("bad base58"); n = n * 58n + BigInt(i); }
+  const bytes: number[] = [];
+  while (n > 0n) { bytes.unshift(Number(n % 256n)); n /= 256n; }
+  for (const c of str) { if (c === "1") bytes.unshift(0); else break; }
+  return Buffer.from(bytes);
+}
+/** Verifies a wallet's ed25519 signature over the exact registration message. */
+function ownerSignatureValid(name: string, ownerWallet: string, message: string, signatureB64: string): boolean {
+  try {
+    const m = message.match(/^Spawnpad: register agent "(.*)" for owner (\S+) at (\S+)$/s);
+    if (!m || m[1] !== name || m[2] !== ownerWallet) return false;
+    const t = Date.parse(m[3]);
+    if (!Number.isFinite(t) || new Date(t).toISOString() !== m[3]) return false;
+    const age = Date.now() - t;
+    if (age > 10 * 60_000 || age < -60_000) return false;
+    const pub = b58decode(ownerWallet);
+    const sig = Buffer.from(signatureB64, "base64");
+    if (pub.length !== 32 || sig.length !== 64) return false;
+    const key = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), pub]), format: "der", type: "spki" });
+    return cryptoVerify(null, Buffer.from(message, "utf8"), key, sig);
+  } catch { return false; }
+}
+// Connected wallets are real wallets, so balances always come from mainnet. The RPC URL may hold a key: never log it.
+const WALLET_RPC = process.env.SOLANA_RPC_URL || (process.env.HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}` : "https://api.mainnet-beta.solana.com");
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const balanceCache = new Map<string, { at: number; v: { sol: number; usdc: number } }>();
+async function rpc<T>(method: string, params: unknown[]): Promise<T> {
+  const r = await fetch(WALLET_RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error(`rpc ${method} http ${r.status}`);
+  const j = await r.json() as { result?: T; error?: { message: string } };
+  if (j.error) throw new Error(`rpc ${method}: ${j.error.message}`);
+  return j.result as T;
+}
 const JobZ = z.object({
   buyerAgentId: z.string(),
   title: z.string().min(1).max(200),
@@ -203,17 +244,41 @@ app.setErrorHandler((err: any, _req, reply: FastifyReply) => {
   return reply.code(500).send({ error: err.message ?? "internal error" });
 });
 
+app.get<{ Params: { address: string } }>("/wallet/:address", async (req, reply) => {
+  const address = req.params.address;
+  if (!SOLANA_ADDR.test(address)) throw new HttpError(400, "address must be a Solana address");
+  const hit = balanceCache.get(address);
+  if (hit && Date.now() - hit.at < 15_000) return hit.v;
+  try {
+    const [bal, tokens] = await Promise.all([
+      rpc<{ value: number }>("getBalance", [address]),
+      rpc<{ value: { account: { data: { parsed: { info: { tokenAmount: { uiAmount: number | null } } } } } }[] }>("getTokenAccountsByOwner", [address, { mint: USDC_MINT }, { encoding: "jsonParsed" }]),
+    ]);
+    const v = { sol: bal.value / 1e9, usdc: tokens.value.reduce((s, t) => s + (t.account.data.parsed.info.tokenAmount.uiAmount ?? 0), 0) };
+    balanceCache.set(address, { at: Date.now(), v });
+    return v;
+  } catch {
+    req.log.warn({ address }, "wallet balance lookup failed");
+    return reply.code(502).send({ error: "balance lookup failed" });
+  }
+});
+
 app.get("/health", async () => ({ ok: true, ring: ring.mode, fallbackRing: isFallback, verifier: await verifierUp() }));
 
 // Registering a wallet on a real ring costs the payer SOL, so cap registrations per IP (tight on mainnet).
 const REG_LIMIT = Number(process.env.AGENT_REGISTRATIONS_PER_HOUR ?? (IS_MAINNET ? 5 : 60));
 app.post("/agents", { config: { rateLimit: { max: REG_LIMIT, timeWindow: "1 hour" } } }, async (req, reply) => {
   const b = AgentZ.parse(req.body);
+  let ownerVerified = false;
+  if (b.ownerMessage !== undefined || b.ownerSignature !== undefined) {
+    if (!b.ownerMessage || !b.ownerSignature || !ownerSignatureValid(b.name, b.ownerWallet, b.ownerMessage, b.ownerSignature)) throw new HttpError(400, "owner signature invalid");
+    ownerVerified = true;
+  }
   const w = await ring.createShieldedWallet(b.name);
   if (FAUCET_ENABLED) await ring.deposit(w.keyId, FAUCET);
   // Note: a client-supplied shieldedAddress/viewingPubKey is ignored in custodial mock mode; the ring wallet is authoritative.
   const apiKey = `sk_agt_${randomBytes(24).toString("base64url")}`;
-  const agent: Agent = { id: id("agt"), name: b.name, ownerWallet: b.ownerWallet, shieldedAddress: w.address, viewingPubKey: w.viewingPubKey, createdAt: now() };
+  const agent: Agent = { id: id("agt"), name: b.name, ownerWallet: b.ownerWallet, shieldedAddress: w.address, viewingPubKey: w.viewingPubKey, ownerVerified, createdAt: now() };
   db.prepare("INSERT INTO agents(id,key_id,data) VALUES(?,?,?)").run(agent.id, w.keyId, JSON.stringify({ ...agent, apiKeyHash: hashKey(apiKey), limits: {} }));
   return reply.code(201).send({ ...publicAgent(agent), ownerViewingKey: w.viewingKey, apiKey });
 });

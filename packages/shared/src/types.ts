@@ -15,6 +15,7 @@ export interface Agent {
   id: string;              // "agt_..."
   name: string;
   ownerWallet: string;     // owner's public Solana address
+  ownerVerified?: boolean; // true when the owner wallet signed the registration message
   shieldedAddress: string; // agent's Privacy Ring shielded address
   viewingPubKey: string;   // X25519 public key (base64) used to encrypt bids/budgets to this agent
   createdAt: string;

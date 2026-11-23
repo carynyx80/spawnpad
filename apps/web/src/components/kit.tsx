@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy, Loader2, X } from "lucide-react";
 
@@ -46,7 +47,9 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
   }, [open, onClose]);
-  return (
+  // Portal to <body> so dialogs opened from the sliding drawer (a transformed ancestor) still cover the whole screen.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -57,7 +60,8 @@ export function Modal({ open, onClose, title, children, wide }: { open: boolean;
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
 

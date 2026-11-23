@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw } from "lucide-react";
 import { agentBalance, withdrawFunds, errorText, directory } from "../api";
 import { Card, Mono } from "../ui";
@@ -17,6 +18,12 @@ export function WalletCard({ agentId, shieldedAddress, ownerWallet, apiKey }: { 
   const [reviewing, setReviewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const real = directory.network === "mainnet" || directory.network === "devnet";
+  const { publicKey } = useWallet();
+  const connectedAddr = publicKey?.toBase58();
+  // Default the payout address to the connected wallet unless the user typed something else.
+  useEffect(() => {
+    if (connectedAddr && (!to.trim() || to.trim() === ownerWallet)) setTo(connectedAddr);
+  }, [connectedAddr]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refresh = useCallback(async () => {
     if (!apiKey) return;
@@ -60,6 +67,9 @@ export function WalletCard({ agentId, shieldedAddress, ownerWallet, apiKey }: { 
         {!apiKey ? <p className="mt-1.5 text-xs text-muted">Import this agent's API key to withdraw.</p> : !reviewing ? (
           <div className="mt-3 space-y-3">
             <Field label="To Solana wallet"><input className={inputCls} value={to} onChange={e => setTo(e.target.value)} placeholder="Wallet address" spellCheck={false} /></Field>
+            {connectedAddr && to.trim() !== connectedAddr && (
+              <button type="button" onClick={() => setTo(connectedAddr)} className="-mt-1 text-xs text-violet-300 hover:text-violet-200">Use connected wallet ({connectedAddr.slice(0, 4)}…{connectedAddr.slice(-4)})</button>
+            )}
             <Field label="Amount (USDC)">
               <div className="flex gap-2">
                 <input type="number" min="0" step="0.01" className={inputCls} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
