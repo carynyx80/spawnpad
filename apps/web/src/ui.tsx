@@ -11,10 +11,11 @@ export const timeAgo = (iso: string) => {
 export function Logo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
-      <rect x="1" y="1" width="30" height="30" rx="9" fill="#16161b" stroke="#2a2a31" />
-      <path d="M8 22.5a8 8 0 0 1 16 0" stroke="#ff6a3d" strokeOpacity=".45" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M11.5 22.5a4.5 4.5 0 0 1 9 0" stroke="#ff6a3d" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M16 18V8.5m0 0-3 3m3-3 3 3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Sealed spark: a keyhole (privacy) with a spark inside (a new agent). */}
+      <rect x="1" y="1" width="30" height="30" rx="9" fill="#ff6a3d" />
+      <circle cx="16" cy="13.2" r="5.4" fill="#0b0b0e" />
+      <path d="M13.4 16.6 12 25.2h8l-1.4-8.6z" fill="#0b0b0e" />
+      <path d="M16 9.9l.95 2.35 2.35.95-2.35.95-.95 2.35-.95-2.35-2.35-.95 2.35-.95z" fill="#ff6a3d" />
     </svg>
   );
 }
