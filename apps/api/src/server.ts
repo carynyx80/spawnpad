@@ -128,8 +128,13 @@ async function settle(j: Job, passed: boolean) {
     const pay = await ring.transfer({ fromKeyId: escrow.keyId, to: seller.shieldedAddress, amount: payout, memo: `spawnpad:${j.id}:payout` });
     j.settlementTx = pay.signature;
     if (fee > 0) {
-      const f = await ring.transfer({ fromKeyId: escrow.keyId, to: feeAddress, amount: fee, memo: `spawnpad:${j.id}:fee` });
-      j.feeTx = f.signature;
+      // The seller is already paid; a failed fee sweep must not undo settlement. The fee stays in escrow for a later sweep.
+      try {
+        const f = await ring.transfer({ fromKeyId: escrow.keyId, to: feeAddress, amount: fee, memo: `spawnpad:${j.id}:fee` });
+        j.feeTx = f.signature;
+      } catch (e) {
+        app.log.error({ jobId: j.id, err: (e as Error).message }, "fee transfer to treasury failed; fee left in escrow");
+      }
     }
     j.status = "settled";
   } else {
