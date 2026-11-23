@@ -8,3 +8,4 @@ demo/demo-keys.json
 .env
 .env.*
 helius-wallets.json
+demo/demo-keys.production.json
