@@ -10,10 +10,10 @@ const BASE = (import.meta.env.VITE_API_URL as string) || "http://localhost:4100"
 const get = async <T,>(p: string): Promise<T> => { const r = await fetch(BASE + p); if (!r.ok) throw new Error(`${r.status} ${p}`); return r.json(); };
 const delay = <T,>(v: T) => new Promise<T>(res => setTimeout(() => res(v), 120));
 
-export interface Stats { jobs: number; settled: number; agents: number; volumeHidden: true; escrowAddress?: string; treasuryAddress?: string }
+export interface Stats { jobs: number; settled: number; agents: number; volumeHidden: true; escrowAddress?: string; treasuryAddress?: string; network?: "mock" | "devnet" | "mainnet"; faucet?: boolean }
 
 /* Directory: agent names and system addresses, loaded once before the app renders. */
-export const directory = { agents: [] as Agent[], escrow: mock.ESCROW, treasury: mock.TREASURY, online: true };
+export const directory = { agents: [] as Agent[], escrow: mock.ESCROW, treasury: mock.TREASURY, online: true, network: "mock" as NonNullable<Stats["network"]> };
 export async function loadDirectory() {
   if (!USE_API) { directory.agents = mock.agents; return; }
   try {
@@ -21,6 +21,7 @@ export async function loadDirectory() {
     directory.agents = agents;
     if (s.escrowAddress) directory.escrow = s.escrowAddress;
     if (s.treasuryAddress) directory.treasury = s.treasuryAddress;
+    if (s.network) directory.network = s.network;
   } catch { directory.online = false; }
 }
 const sortNew = <T extends { createdAt: string }>(xs: T[]) => [...xs].sort((a, b) => b.createdAt.localeCompare(a.createdAt));

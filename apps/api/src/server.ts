@@ -18,6 +18,22 @@ const VERIFIER_URL = process.env.VERIFIER_URL ?? "http://localhost:4200";
 const FEE_BPS = 150;
 const FAUCET = 1000;
 
+// ---------- mainnet safety guards ----------
+// Mainnet moves real funds. Refuse to boot unless the operator explicitly acknowledges it.
+const IS_MAINNET = process.env.RING_MODE === "helius" && process.env.HELIUS_CLUSTER === "mainnet";
+if (IS_MAINNET && process.env.MAINNET_CONFIRM !== "I_UNDERSTAND_REAL_FUNDS") {
+  console.error("Refusing to start on mainnet: set MAINNET_CONFIRM=I_UNDERSTAND_REAL_FUNDS to acknowledge real funds are at stake.");
+  process.exit(1);
+}
+// The demo faucet only exists in mock mode (or devnet when explicitly enabled). Never on mainnet.
+const FAUCET_ENABLED = !IS_MAINNET && (process.env.RING_MODE !== "helius" || process.env.ALLOW_FAUCET === "true");
+// Company wallet: where the 1.5% fee goes. Only honored on a real ring; the mock ring can't pay outside addresses.
+const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS?.trim() || undefined;
+if (TREASURY_ADDRESS && !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(TREASURY_ADDRESS)) {
+  console.error(`TREASURY_ADDRESS is not a valid Solana address: ${TREASURY_ADDRESS}`);
+  process.exit(1);
+}
+
 const db = openDb(DATA_DIR);
 const ring = await loadRing(DATA_DIR);
 const isFallback = !(await import("node:fs")).existsSync(path.resolve(here, "../../../packages/ring/src/index.ts"));
@@ -35,6 +51,9 @@ async function systemWallet(role: "escrow" | "treasury"): Promise<ShieldedWallet
 }
 const escrow = await systemWallet("escrow");
 const treasury = await systemWallet("treasury");
+const useCompanyTreasury = !!TREASURY_ADDRESS && ring.mode === "helius";
+const feeAddress = useCompanyTreasury ? TREASURY_ADDRESS! : treasury.address;
+if (TREASURY_ADDRESS && !useCompanyTreasury) console.warn(`TREASURY_ADDRESS set but ring is "${ring.mode}"; fees stay in the internal treasury until RING_MODE=helius.`);
 
 // ---------- helpers ----------
 const id = (p: string) => `${p}_${randomBytes(9).toString("base64url")}`;
@@ -109,7 +128,7 @@ async function settle(j: Job, passed: boolean) {
     const pay = await ring.transfer({ fromKeyId: escrow.keyId, to: seller.shieldedAddress, amount: payout, memo: `spawnpad:${j.id}:payout` });
     j.settlementTx = pay.signature;
     if (fee > 0) {
-      const f = await ring.transfer({ fromKeyId: escrow.keyId, to: treasury.address, amount: fee, memo: `spawnpad:${j.id}:fee` });
+      const f = await ring.transfer({ fromKeyId: escrow.keyId, to: feeAddress, amount: fee, memo: `spawnpad:${j.id}:fee` });
       j.feeTx = f.signature;
     }
     j.status = "settled";
@@ -184,7 +203,7 @@ app.get("/health", async () => ({ ok: true, ring: ring.mode, fallbackRing: isFal
 app.post("/agents", async (req, reply) => {
   const b = AgentZ.parse(req.body);
   const w = await ring.createShieldedWallet(b.name);
-  await ring.deposit(w.keyId, FAUCET);
+  if (FAUCET_ENABLED) await ring.deposit(w.keyId, FAUCET);
   // Note: a client-supplied shieldedAddress/viewingPubKey is ignored in custodial mock mode; the ring wallet is authoritative.
   const apiKey = `sk_agt_${randomBytes(24).toString("base64url")}`;
   const agent: Agent = { id: id("agt"), name: b.name, ownerWallet: b.ownerWallet, shieldedAddress: w.address, viewingPubKey: w.viewingPubKey, createdAt: now() };
@@ -366,7 +385,9 @@ app.get("/stats", async () => ({
   agents: (db.prepare("SELECT COUNT(*) c FROM agents").get() as { c: number }).c,
   volumeHidden: true,
   escrowAddress: escrow.address,
-  treasuryAddress: treasury.address,
+  treasuryAddress: feeAddress,
+  network: IS_MAINNET ? "mainnet" : ring.mode === "helius" ? (process.env.HELIUS_CLUSTER ?? "devnet") : "mock",
+  faucet: FAUCET_ENABLED,
 }));
 
 // ---------- deadline sweeper ----------

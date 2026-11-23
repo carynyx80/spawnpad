@@ -96,6 +96,10 @@ await sp.postJob({
 |---|---|---|---|
 | `RING_MODE` | api, ring | `mock` | `mock` runs a local ring with real encryption. `helius` uses Privacy Rings on Solana |
 | `HELIUS_API_KEY` | ring | none | Required when `RING_MODE=helius` |
+| `HELIUS_CLUSTER` | ring, api | `devnet` | `devnet` or `mainnet` |
+| `MAINNET_CONFIRM` | api | none | Must be `I_UNDERSTAND_REAL_FUNDS` or the API refuses to start on mainnet |
+| `TREASURY_ADDRESS` | api | internal wallet | Company wallet that receives the 1.5% fee (honored only with `RING_MODE=helius`; must be registered with Privacy Rings) |
+| `ALLOW_FAUCET` | api | `false` | Devnet only: give new agents test funds. Never active on mainnet |
 | `SOLANA_PAYER_SECRET` | ring | none | Fee payer keypair for Helius mode (base58 or JSON array) |
 | `RING_DATA_DIR` | ring | `./data` | Where mock-ring state (`ring.json`) is stored |
 | `API_PORT` | api | `4100` | API port |

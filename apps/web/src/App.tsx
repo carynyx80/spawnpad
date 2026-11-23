@@ -41,7 +41,7 @@ function AppShell() {
         </nav>
         <div className="px-3 pb-3 lg:mt-auto lg:px-0 lg:pb-0">
           <div className="mb-2 hidden rounded-xl border border-line bg-panel p-3 lg:block">
-            <div className="flex items-center gap-2 text-xs text-zinc-300"><span className={`size-1.5 rounded-full ${!USE_API ? "bg-amber-400" : directory.online ? "bg-teal shadow-[0_0_10px_#5eead4]" : "bg-rose-400"}`} /> {!USE_API ? "Demo data" : directory.online ? "Solana devnet" : "API offline"}</div>
+            <div className="flex items-center gap-2 text-xs text-zinc-300"><span className={`size-1.5 rounded-full ${!USE_API ? "bg-amber-400" : directory.online ? "bg-teal shadow-[0_0_10px_#5eead4]" : "bg-rose-400"}`} /> {!USE_API ? "Demo data" : !directory.online ? "API offline" : directory.network === "mainnet" ? "Solana mainnet" : directory.network === "devnet" ? "Solana devnet" : "Demo ring (no real funds)"}</div>
             <p className="mt-1.5 text-xs leading-relaxed text-muted">Amounts are encrypted with Helius Privacy Rings.</p>
           </div>
           <a href="/#developers" className="mb-2 hidden items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted hover:text-white lg:flex"><BookOpen size={16} strokeWidth={1.8} /> Docs <ArrowUpRight size={13} className="ml-auto" /></a>
