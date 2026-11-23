@@ -51,7 +51,24 @@ const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 const cipher = n => Array.from({ length: n }, () => B64[Math.floor(rnd() * 64)]).join("");
 
-function banner({ w, h, markSize, wmSize, tagSize, cx, cy, avatarSafe }) {
+
+function launchExtras({ w, h, cx, markY, tagSize, pillsY }) {
+  const f = Math.round(tagSize * 0.6);
+  const live = "Now live on Solana mainnet";
+  const lw = live.length * f * 0.6 + f * 3;
+  const ly = markY - f * 3.2;
+  const powered = Math.round(tagSize * 0.72);
+  const py = Math.max(pillsY + tagSize * 2.6, h - tagSize * 2.4);
+  return `<g>
+    <rect x="${(cx - lw / 2).toFixed(1)}" y="${(ly - f * 1.5).toFixed(1)}" width="${lw.toFixed(1)}" height="${(f * 2.3).toFixed(1)}" rx="${(f * 1.15).toFixed(1)}" fill="${ORANGE}" fill-opacity="0.12" stroke="${ORANGE}" stroke-opacity="0.45"/>
+    <circle cx="${(cx - lw / 2 + f * 1.25).toFixed(1)}" cy="${(ly - f * 0.36).toFixed(1)}" r="${(f * 0.26).toFixed(1)}" fill="${ORANGE}"/>
+    <text x="${(cx - lw / 2 + f * 1.9).toFixed(1)}" y="${ly.toFixed(1)}" font-family="Geist Mono, monospace" font-size="${f}" fill="#ffd2bf">${live}</text>
+  </g>
+  <text x="${cx}" y="${py.toFixed(1)}" text-anchor="middle" font-family="Geist, sans-serif" font-size="${powered}" fill="#a1a1aa">Powered by <tspan fill="#f4f4f5" font-weight="500">Helius Privacy Rings</tspan></text>
+  <text x="${w - 40}" y="${h - 34}" text-anchor="end" font-family="Geist Mono, monospace" font-size="${Math.round(tagSize * 0.5)}" fill="#71717a">spawnpad.online</text>`;
+}
+
+function banner({ w, h, markSize, wmSize, tagSize, cx, cy, avatarSafe, launch }) {
   const rows = [];
   for (let y = 34, i = 0; y < h + 20; y += 38, i++) {
     const x = -((i * 97) % 220);
@@ -95,7 +112,7 @@ function banner({ w, h, markSize, wmSize, tagSize, cx, cy, avatarSafe }) {
   <text x="${(gx + markSize + gap).toFixed(1)}" y="${baseline.toFixed(1)}" font-family="Geist, sans-serif" font-weight="500" font-size="${wmSize}" letter-spacing="${(-wmSize * 0.035).toFixed(2)}" fill="#f4f4f5">spawnpad</text>
   <text x="${cx}" y="${tagY.toFixed(1)}" text-anchor="middle" font-family="Geist, sans-serif" font-size="${tagSize}" fill="#a1a1aa">The private job market for AI agents</text>
   ${pillEls}
-  <text x="${w - 36}" y="${h - 30}" text-anchor="end" font-family="Geist Mono, monospace" font-size="${Math.round(tagSize * 0.52)}" fill="#71717a">Powered by <tspan fill="#d4d4d8">Helius Privacy Rings</tspan>  ·  spawnpad.online</text>
+  ${launch ? launchExtras({ w, h, cx, markY, tagSize, pillsY }) : `<text x="${w - 36}" y="${h - 30}" text-anchor="end" font-family="Geist Mono, monospace" font-size="${Math.round(tagSize * 0.52)}" fill="#71717a">Powered by <tspan fill="#d4d4d8">Helius Privacy Rings</tspan>  ·  spawnpad.online</text>`}
 </svg>`;
 }
 
@@ -114,6 +131,7 @@ const files = {
   "logo-wordmark-light.svg": wordmark("light"),
   "twitter-header.svg": banner({ w: 1500, h: 500, markSize: 112, wmSize: 100, tagSize: 34, cx: 820, cy: 205, avatarSafe: true }),
   "og-image.svg": banner({ w: 1200, h: 630, markSize: 104, wmSize: 92, tagSize: 34, cx: 600, cy: 270 }),
+  "launch-banner.svg": banner({ w: 1600, h: 900, markSize: 150, wmSize: 136, tagSize: 46, cx: 800, cy: 420, launch: true }),
 };
 for (const [name, svg] of Object.entries(files)) writeFileSync(join(BRAND, name), svg);
 
@@ -128,6 +146,7 @@ png(files["logo-wordmark-light.svg"], 920, join(BRAND, "logo-wordmark-light.png"
 png(files["twitter-header.svg"], 1500, join(BRAND, "twitter-header-1500x500.png"));
 png(files["twitter-header.svg"], 3000, join(BRAND, "twitter-header-3000x1000.png"));
 png(files["og-image.svg"], 1200, join(BRAND, "og-image-1200x630.png"));
+png(files["launch-banner.svg"], 1600, join(BRAND, "launch-banner-1600x900.png"));
 
 // Web app assets
 writeFileSync(join(PUBLIC, "favicon.svg"), markSvg(32));

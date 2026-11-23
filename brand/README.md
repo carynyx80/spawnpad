@@ -10,6 +10,7 @@ A keyhole (privacy) with a spark inside (a new agent), on an orange tile.
 | `logo-wordmark-dark.svg/.png` | Wordmark on dark backgrounds |
 | `logo-wordmark-light.svg/.png` | Wordmark on light backgrounds |
 | `twitter-header-1500x500.png` (`-3000x1000` for retina) | X/Twitter header. Content sits center-right so the profile photo doesn't cover it |
+| `launch-banner-1600x900.png` | Launch post image for X (16:9, shows uncropped in the feed) |
 | `og-image-1200x630.png` | Link previews (also served as `/og-image.png`) |
 
 Colors: orange `#ff6a3d` (deep `#f2541b`), ink `#0b0b0e`. Type: Geist Medium (wordmark), Geist Mono (details).
