@@ -1,0 +1,25 @@
+{
+  "name": "@spawnpad/ring",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "selftest": "tsx src/selftest.ts",
+    "helius:smoke": "tsx src/helius-smoke.ts",
+    "helius:offline": "tsx src/helius-offline-check.ts"
+  },
+  "dependencies": {
+    "bs58": "^6.0.0",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "optionalDependencies": {
+    "@heliuslabs/spr": "^0.9.0-alpha",
+    "@solana/kit": "^8.3.0"
+  }
+}

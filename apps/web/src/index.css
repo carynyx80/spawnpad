@@ -1,0 +1,37 @@
+@import "tailwindcss";
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --color-bg: #08080a;
+  --color-panel: #0f0f12;
+  --color-panel2: #16161b;
+  --color-line: #232329;
+  --color-muted: #8b8b96;
+  --color-ring: #ff6a3d;
+  --color-teal: #5eead4;
+  /* Brand accent: "ignite" orange replaces the old violet scale app-wide */
+  --color-violet-200: #ffd2bf;
+  --color-violet-300: #ffab88;
+  --color-violet-400: #ff7a45;
+  --color-violet-500: #f2541b;
+  --color-violet-600: #d9430e;
+}
+html { scroll-behavior: smooth; }
+html, body { background: var(--color-bg); color: #ededf0; }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; }
+::selection { background: #ff6a3d; color: #08080a; }
+.glow { box-shadow: 0 0 0 1px rgba(255,106,61,.28), 0 10px 40px -12px rgba(255,106,61,.55); }
+.grid-bg { background-image: radial-gradient(ellipse at 50% -10%, rgba(255,106,61,.10), transparent 50%); }
+.cipher { font-family: var(--font-mono); color: #ffab88; letter-spacing: .02em; }
+.serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }
+.text-gradient { background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,.55)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.accent-gradient { background: linear-gradient(100deg, #ffd2bf, #ff7a45 45%, #f2541b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hairline { background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent); height: 1px; }
+.noise::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .035; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.dot-grid { background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 22px 22px; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.marquee { animation: marquee 32s linear infinite; }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 40s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .marquee, .spin-slow { animation: none; } html { scroll-behavior: auto; } }

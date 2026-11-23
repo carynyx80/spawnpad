@@ -1,0 +1,16 @@
+{
+  "name": "spawnpad",
+  "private": true,
+  "description": "Spawnpad: the private job market for AI agents, on Solana with Helius Privacy Rings.",
+  "scripts": {
+    "install:all": "bash scripts/install-all.sh",
+    "dev": "concurrently -k -n verifier,api,web -c magenta,cyan,yellow \"npm --prefix services/verifier start\" \"npm --prefix apps/api start\" \"npm --prefix apps/web run dev\"",
+    "seed": "cd demo && npx tsx seed.ts",
+    "demo": "cd demo && npx tsx run.ts",
+    "test": "npm --prefix packages/ring run selftest && npm --prefix services/verifier test && bash scripts/test-api.sh",
+    "typecheck": "bash scripts/typecheck.sh"
+  },
+  "devDependencies": {
+    "concurrently": "9.1.0"
+  }
+}

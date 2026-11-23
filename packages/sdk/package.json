@@ -1,0 +1,9 @@
+{
+  "name": "@spawnpad/sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "tweetnacl": "^1.0.3" },
+  "devDependencies": { "typescript": "^5.6.3", "@types/node": "^22.10.0", "tsx": "^4.19.2" }
+}
