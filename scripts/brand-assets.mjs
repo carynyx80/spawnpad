@@ -25,6 +25,18 @@ const markInner = (tile = ORANGE, hole = INK, spark = ORANGE) => `
   <path d="M16 9.9l.95 2.35 2.35.95-2.35.95-.95 2.35-.95-2.35-2.35-.95 2.35-.95z" fill="${spark}"/>`;
 const markSvg = (size, opts) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32" fill="none">${markInner(...(opts ?? []))}</svg>`;
 
+const glyphSvg = (size, color = ORANGE) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="9.5 6.8 13 19.4" fill="none" preserveAspectRatio="xMidYMid meet">
+  <defs><mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32"><rect width="32" height="32" fill="#fff"/><path d="M16 9.9l.95 2.35 2.35.95-2.35.95-.95 2.35-.95-2.35-2.35-.95 2.35-.95z" fill="#000"/></mask></defs>
+  <g mask="url(#cut)"><circle cx="16" cy="13.2" r="5.4" fill="${color}"/><path d="M13.4 16.6 12 25.2h8l-1.4-8.6z" fill="${color}"/></g>
+</svg>`;
+const avatarSvg = (size) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" fill="${ORANGE}"/>
+  <g transform="translate(16 16.4) scale(1.12) translate(-16 -16.4)">
+    <circle cx="16" cy="13.2" r="5.4" fill="${INK}"/><path d="M13.4 16.6 12 25.2h8l-1.4-8.6z" fill="${INK}"/>
+    <path d="M16 9.9l.95 2.35 2.35.95-2.35.95-.95 2.35-.95-2.35-2.35-.95 2.35-.95z" fill="${ORANGE}"/>
+  </g>
+</svg>`;
+
 const wordmark = (theme) => {
   const text = theme === "dark" ? "#ededf0" : "#121216";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="460" height="128" viewBox="0 0 460 128" fill="none">
@@ -83,7 +95,7 @@ function banner({ w, h, markSize, wmSize, tagSize, cx, cy, avatarSafe }) {
   <text x="${(gx + markSize + gap).toFixed(1)}" y="${baseline.toFixed(1)}" font-family="Geist, sans-serif" font-weight="500" font-size="${wmSize}" letter-spacing="${(-wmSize * 0.035).toFixed(2)}" fill="#f4f4f5">spawnpad</text>
   <text x="${cx}" y="${tagY.toFixed(1)}" text-anchor="middle" font-family="Geist, sans-serif" font-size="${tagSize}" fill="#a1a1aa">The private job market for AI agents</text>
   ${pillEls}
-  <text x="${w - 36}" y="${h - 30}" text-anchor="end" font-family="Geist Mono, monospace" font-size="${Math.round(tagSize * 0.52)}" fill="#71717a">spawnpad.online</text>
+  <text x="${w - 36}" y="${h - 30}" text-anchor="end" font-family="Geist Mono, monospace" font-size="${Math.round(tagSize * 0.52)}" fill="#71717a">Powered by <tspan fill="#d4d4d8">Helius Privacy Rings</tspan>  ·  spawnpad.online</text>
 </svg>`;
 }
 
@@ -94,6 +106,10 @@ const png = (svg, width, out) => {
 
 const files = {
   "logo-mark.svg": markSvg(512),
+  "logo-standalone.svg": glyphSvg(512),
+  "logo-standalone-white.svg": glyphSvg(512, "#ffffff"),
+  "logo-standalone-black.svg": glyphSvg(512, INK),
+  "logo-avatar.svg": avatarSvg(1024),
   "logo-wordmark-dark.svg": wordmark("dark"),
   "logo-wordmark-light.svg": wordmark("light"),
   "twitter-header.svg": banner({ w: 1500, h: 500, markSize: 112, wmSize: 100, tagSize: 34, cx: 820, cy: 205, avatarSafe: true }),
@@ -103,6 +119,10 @@ for (const [name, svg] of Object.entries(files)) writeFileSync(join(BRAND, name)
 
 png(files["logo-mark.svg"], 512, join(BRAND, "logo-mark-512.png"));
 png(files["logo-mark.svg"], 1024, join(BRAND, "logo-mark-1024.png"));
+png(files["logo-standalone.svg"], 1024, join(BRAND, "logo-standalone-1024.png"));
+png(files["logo-standalone-white.svg"], 1024, join(BRAND, "logo-standalone-white-1024.png"));
+png(files["logo-standalone-black.svg"], 1024, join(BRAND, "logo-standalone-black-1024.png"));
+png(files["logo-avatar.svg"], 1024, join(BRAND, "logo-avatar-1024.png"));
 png(files["logo-wordmark-dark.svg"], 920, join(BRAND, "logo-wordmark-dark.png"));
 png(files["logo-wordmark-light.svg"], 920, join(BRAND, "logo-wordmark-light.png"));
 png(files["twitter-header.svg"], 1500, join(BRAND, "twitter-header-1500x500.png"));

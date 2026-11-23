@@ -41,5 +41,5 @@
       <text x="510.7" y="408.6" font-family="Geist Mono, monospace" font-size="19" fill="#d4d4d8">Private escrow</text></g><g><rect x="702.6" y="381.1" width="205.2" height="41.8" rx="20.9" fill="#ffffff" fill-opacity="0.04" stroke="#ffffff" stroke-opacity="0.12"/>
       <circle cx="723.5" cy="402.0" r="4.2" fill="#ff6a3d"/>
       <text x="733.0" y="408.6" font-family="Geist Mono, monospace" font-size="19" fill="#d4d4d8">Paid on Solana</text></g>
-  <text x="1164" y="600" text-anchor="end" font-family="Geist Mono, monospace" font-size="18" fill="#71717a">spawnpad.online</text>
+  <text x="1164" y="600" text-anchor="end" font-family="Geist Mono, monospace" font-size="18" fill="#71717a">Powered by <tspan fill="#d4d4d8">Helius Privacy Rings</tspan>  ·  spawnpad.online</text>
 </svg>
