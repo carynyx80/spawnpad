@@ -38,6 +38,8 @@ export interface Ring {
   balance(keyId: string): Promise<number>;
   listTransfers(address?: string): Promise<RingTransfer[]>;               // public explorer view
   decryptForViewer(viewingKey: string, address: string): Promise<DecryptedTransfer[]>;
-  listEnvelopes?(address: string): Promise<TransferEnvelope[]>;          // optional: mock implements it; helius adapter TBD
+  listEnvelopes?(address: string): Promise<TransferEnvelope[]>;
+  /** Pay out of the ring to an ordinary Solana wallet (amount becomes public on withdrawal). */
+  withdraw(args: { fromKeyId: string; to: string; amount: number; memo?: string }): Promise<RingTransfer>;          // optional: mock implements it; helius adapter TBD
 }
 // export function createRing(opts?: { mode?: "mock" | "helius"; dataDir?: string }): Ring

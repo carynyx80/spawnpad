@@ -19,9 +19,9 @@ const DEFAULT_DATA_DIR = resolve(here, "../../../data");
 interface Sealed { nonce: string; ephemeralPub: string; box: string }
 interface StoredWallet { keyId: string; label: string; address: string; viewingKey: string; viewingPubKey: string; balance: number }
 interface StoredTransfer extends RingTransfer {
-  kind: "deposit" | "transfer";
+  kind: "deposit" | "transfer" | "withdraw";
   sealedForSender?: Sealed;   // undefined for deposits (faucet has no viewing key)
-  sealedForRecipient: Sealed;
+  sealedForRecipient?: Sealed; // undefined for withdrawals (recipient is an outside wallet)
 }
 interface State { wallets: StoredWallet[]; transfers: StoredTransfer[] }
 
@@ -110,6 +110,20 @@ class MockRing implements Ring {
     return publicView(t);
   }
 
+  /** Mock withdrawal: debits the wallet and records the payout to an outside address (sender copy only). */
+  async withdraw({ fromKeyId, to, amount, memo }: { fromKeyId: string; to: string; amount: number; memo?: string }): Promise<RingTransfer> {
+    if (!(amount > 0)) throw new Error("amount must be positive");
+    const from = this.wallet(fromKeyId);
+    if (from.balance < amount) throw new Error("insufficient private balance");
+    const sealedForSender = seal({ amount, asset: "USDC", memo }, from.viewingPubKey);
+    const t: StoredTransfer = {
+      kind: "withdraw", signature: rand58(64), from: from.address, to,
+      encryptedAmount: sealedForSender.box, sealedForSender, createdAt: new Date().toISOString(),
+    };
+    from.balance -= amount; this.state.transfers.push(t); this.save();
+    return publicView(t);
+  }
+
   async balance(keyId: string) { return this.wallet(keyId).balance; }
 
   async listTransfers(address?: string): Promise<RingTransfer[]> {
@@ -132,7 +146,7 @@ class MockRing implements Ring {
     const out: DecryptedTransfer[] = [];
     for (const t of this.state.transfers) {
       let p: any = null; let direction: "in" | "out" | null = null;
-      if (t.to === address) { p = open(t.sealedForRecipient, viewingKey); direction = "in"; }
+      if (t.to === address && t.sealedForRecipient) { p = open(t.sealedForRecipient, viewingKey); direction = "in"; }
       if (!p && t.from === address && t.sealedForSender) { p = open(t.sealedForSender, viewingKey); direction = "out"; }
       if (p && direction) out.push({ ...publicView(t), ...(p.memo ? { memo: p.memo } : {}), amount: p.amount, direction });
     }

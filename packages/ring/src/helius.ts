@@ -48,7 +48,6 @@ export function heliusEnv(): { env?: HeliusEnv; missing: string[] } {
   if (!payerSecret) missing.push("SOLANA_PAYER_SECRET");
   const cluster = (process.env.HELIUS_CLUSTER ?? "devnet") as "devnet" | "mainnet";
   const assetMint = process.env.RING_ASSET_MINT || undefined;
-  if (assetMint && !process.env.RING_SPL_SOURCE_ACCOUNT) missing.push("RING_SPL_SOURCE_ACCOUNT (required with RING_ASSET_MINT)");
   if (missing.length) return { missing };
   return {
     missing,
@@ -61,7 +60,7 @@ export function heliusEnv(): { env?: HeliusEnv; missing: string[] } {
 }
 
 interface StoredWallet { keyId: string; label: string; seed: string; address: string; createdAt: string }
-interface LogEntry { signature: string; from: string; to: string; memo?: string; cipher: string; createdAt: string; kind: "deposit" | "transfer" }
+interface LogEntry { signature: string; from: string; to: string; memo?: string; cipher: string; createdAt: string; kind: "deposit" | "transfer" | "withdraw" }
 interface Store { wallets: StoredWallet[]; log: LogEntry[] }
 
 type SprClient = Awaited<ReturnType<Spr["createSprClient"]>>;
@@ -209,6 +208,7 @@ export class HeliusRing implements Ring {
   }
 
   async deposit(keyId: string, amount: number): Promise<RingTransfer> {
+    if (process.env.RING_ASSET_MINT && !process.env.RING_SPL_SOURCE_ACCOUNT) throw new Error("RING_SPL_SOURCE_ACCOUNT is required for SPL deposits");
     const { spr, client, payer, env, send } = await this.ready();
     const h = await this.handle(keyId);
     return this.serial(h, async () => {
@@ -240,6 +240,25 @@ export class HeliusRing implements Ring {
       const rh = rec && this.handles.get(rec.keyId);
       if (rh) rh.lastSlot = r.slot;
       return this.log({ signature: r.signature, from: h.stored.address, to: args.to, cipher: r.cipher, kind: "transfer", memo: args.memo });
+    });
+  }
+
+  /** Withdraw from the private balance to an ordinary Solana wallet (SPL: the recipient's associated token account). */
+  async withdraw(args: { fromKeyId: string; to: string; amount: number; memo?: string }): Promise<RingTransfer> {
+    const { spr, client, payer, env, send } = await this.ready();
+    const h = await this.handle(args.fromKeyId);
+    const amount = this.toBase(args.amount, env);
+    return this.serial(h, async () => {
+      await this.sync(h);
+      const mint = this.mint(spr, env);
+      if (h.wallet.balance(mint).amount < amount) throw new Error("insufficient private balance");
+      const tx = await spr.buildWithdrawalTransaction({
+        client, wallet: h.wallet, keys: h.keys, feePayer: payer.address, recipient: args.to as KitNS.Address, amount,
+        ...(env.assetMint ? { asset: mint } : {}),
+      });
+      const r = await send(tx, [payer, h.owner]);
+      h.lastSlot = r.slot;
+      return this.log({ signature: r.signature, from: h.stored.address, to: args.to, cipher: r.cipher, kind: "withdraw", memo: args.memo });
     });
   }
 

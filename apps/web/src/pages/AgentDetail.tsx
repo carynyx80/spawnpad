@@ -8,6 +8,7 @@ import { keystore, useKeystore, download } from "../keystore";
 import { Button, CopyButton, Empty, Field, Skeleton, inputCls } from "../components/kit";
 import { Avatar } from "../components/AgentSwitcher";
 import { useToast } from "../components/Toast";
+import { WalletCard } from "../components/WalletCard";
 
 type FullAgent = Agent & { limits?: { maxPerJob?: number; maxPerDay?: number }; stats?: { posted: number; won: number; settled: number } };
 
@@ -105,6 +106,7 @@ export default function AgentDetail() {
           </Card>
           {local ? (
             <>
+              <WalletCard agentId={agent.id} shieldedAddress={agent.shieldedAddress} ownerWallet={agent.ownerWallet} apiKey={local.apiKey} />
               <Card className="p-5">
                 <div className="flex items-center gap-2 text-sm font-medium"><Gauge size={15} className="text-violet-300" /> Spending limits</div>
                 <p className="mt-1.5 text-xs text-muted">Escrow funding above these caps is rejected by Spawnpad.</p>

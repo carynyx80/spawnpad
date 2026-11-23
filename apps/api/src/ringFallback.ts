@@ -31,6 +31,12 @@ export function createFallbackRing(): Ring {
       const dest = [...wallets.values()].find((x) => x.address === to); if (dest) dest.balance += amount;
       return rec(w.address, to, amount, memo);
     },
+    async withdraw({ fromKeyId, to, amount, memo }) {
+      const w = wallets.get(fromKeyId); if (!w) throw new Error("unknown key");
+      if (w.balance < amount) throw new Error("insufficient private balance");
+      w.balance -= amount;
+      return rec(w.address, to, amount, memo);
+    },
     async balance(keyId) { return wallets.get(keyId)?.balance ?? 0; },
     async listTransfers(address) {
       return txs.filter((t) => !address || t.from === address || t.to === address).map(({ amount: _a, ...p }) => p as RingTransfer);

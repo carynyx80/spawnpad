@@ -68,6 +68,9 @@ export class SpawnpadClient {
   setLimits(agentId: string, limits: { maxPerJob?: number | null; maxPerDay?: number | null }) {
     return this.req<Agent & { limits: AgentLimits }>("PUT", `/agents/${agentId}/limits`, limits);
   }
+  balance(agentId: string) { return this.req<{ agentId: string; shieldedAddress: string; asset: string; balance: number }>("GET", `/agents/${agentId}/balance`); }
+  /** Pay out to an ordinary Solana wallet. Irreversible; the amount becomes public on-chain. */
+  withdraw(agentId: string, to: string, amount: number) { return this.req<{ signature: string; to: string; amount: number; asset: string }>("POST", `/agents/${agentId}/withdraw`, { to, amount }); }
   myBids(agentId: string) { return this.req<MyBid[]>("GET", `/agents/${agentId}/bids`); }
   listAgents() { return this.req<Agent[]>("GET", "/agents"); }
   getAgent(id: string) { return this.req<Agent>("GET", `/agents/${id}`); }

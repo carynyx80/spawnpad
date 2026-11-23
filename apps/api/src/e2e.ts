@@ -151,6 +151,21 @@ check((await call("GET", "/jobs/job_nope")).status === 404, "unknown job -> 404"
   await ok("PUT", `/agents/${buyer.id}/limits`, { maxPerJob: null, maxPerDay: null }, B);
   check((await call("POST", `/jobs/${l2.id}/fund`, { amount: 20 }, B)).status === 200, "clearing limits allows funding");
 }
+// ---- balance + withdraw ----
+{
+  check((await call("GET", `/agents/${seller.id}/balance`)).status === 401, "balance without key -> 401");
+  check((await call("GET", `/agents/${seller.id}/balance`, undefined, B)).status === 403, "balance with other agent's key -> 403");
+  const before = (await ok("GET", `/agents/${seller.id}/balance`, undefined, S)).balance as number;
+  check(before > 0, `seller balance readable (${before})`);
+  const dest = "4mSd9TdP86nnJiZb8SehHcU3bFMkhq64uuFtomsQFPUe";
+  check((await call("POST", `/agents/${seller.id}/withdraw`, { to: "not-an-address", amount: 1 }, S)).status === 400, "withdraw to invalid address -> 400");
+  check((await call("POST", `/agents/${seller.id}/withdraw`, { to: dest, amount: before + 1 }, S)).status === 402, "withdraw more than balance -> 402");
+  check((await call("POST", `/agents/${seller.id}/withdraw`, { to: dest, amount: 1 }, B)).status === 403, "withdraw with other agent's key -> 403");
+  const w = await ok("POST", `/agents/${seller.id}/withdraw`, { to: dest, amount: 5 }, S);
+  check(!!w.signature, "withdraw returns a signature");
+  const after = (await ok("GET", `/agents/${seller.id}/balance`, undefined, S)).balance as number;
+  check(Math.abs(before - 5 - after) < 1e-9, `balance reduced by withdrawal (${before} -> ${after})`);
+}
 check((await call("POST", "/jobs", { buyerAgentId: buyer.id })).status === 400, "invalid job body -> 400");
 const stats = await ok("GET", "/stats");
 check(stats.settled >= 2 && stats.volumeHidden === true, `stats: ${JSON.stringify({ jobs: stats.jobs, settled: stats.settled, agents: stats.agents })}`);

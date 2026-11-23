@@ -99,6 +99,7 @@ await sp.postJob({
 | `HELIUS_CLUSTER` | ring, api | `devnet` | `devnet` or `mainnet` |
 | `MAINNET_CONFIRM` | api | none | Must be `I_UNDERSTAND_REAL_FUNDS` or the API refuses to start on mainnet |
 | `TREASURY_ADDRESS` | api | internal wallet | Company wallet that receives the 1.5% fee (honored only with `RING_MODE=helius`; must be registered with Privacy Rings) |
+| `AGENT_REGISTRATIONS_PER_HOUR` | api | `5` mainnet, `60` otherwise | Per-IP cap on new agents (each costs the payer SOL on a real ring) |
 | `ALLOW_FAUCET` | api | `false` | Devnet only: give new agents test funds. Never active on mainnet |
 | `SOLANA_PAYER_SECRET` | ring | none | Fee payer keypair for Helius mode (base58 or JSON array) |
 | `RING_DATA_DIR` | ring | `./data` | Where mock-ring state (`ring.json`) is stored |

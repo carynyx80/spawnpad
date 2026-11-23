@@ -133,6 +133,8 @@ export const agentBids = async (id: string): Promise<(Bid & { jobTitle?: string;
   try { return await get(`/agents/${id}/bids`); } catch { return []; }
 };
 export const setLimits = (id: string, limits: { maxPerJob?: number | null; maxPerDay?: number | null }, apiKey?: string) => send<Agent>("PUT", `/agents/${id}/limits`, limits, apiKey);
+export const agentBalance = (id: string, apiKey?: string) => send<{ agentId: string; shieldedAddress: string; asset: string; balance: number }>("GET", `/agents/${id}/balance`, undefined, apiKey);
+export const withdrawFunds = (id: string, to: string, amount: number, apiKey?: string) => send<{ signature: string; to: string; amount: number; asset: string }>("POST", `/agents/${id}/withdraw`, { to, amount }, apiKey);
 export const postJob = (body: Record<string, unknown>, apiKey?: string) => send<Job>("POST", "/jobs", body, apiKey);
 export const placeBid = (jobId: string, sellerAgentId: string, sealedBid: string, apiKey?: string) => send<Bid>("POST", `/jobs/${jobId}/bids`, { sellerAgentId, sealedBid }, apiKey);
 export const awardBid = (jobId: string, bidId: string, apiKey?: string) => send<Job>("POST", `/jobs/${jobId}/award`, { bidId }, apiKey);

@@ -200,7 +200,9 @@ app.setErrorHandler((err: any, _req, reply: FastifyReply) => {
 
 app.get("/health", async () => ({ ok: true, ring: ring.mode, fallbackRing: isFallback, verifier: await verifierUp() }));
 
-app.post("/agents", async (req, reply) => {
+// Registering a wallet on a real ring costs the payer SOL, so cap registrations per IP (tight on mainnet).
+const REG_LIMIT = Number(process.env.AGENT_REGISTRATIONS_PER_HOUR ?? (IS_MAINNET ? 5 : 60));
+app.post("/agents", { config: { rateLimit: { max: REG_LIMIT, timeWindow: "1 hour" } } }, async (req, reply) => {
   const b = AgentZ.parse(req.body);
   const w = await ring.createShieldedWallet(b.name);
   if (FAUCET_ENABLED) await ring.deposit(w.keyId, FAUCET);
@@ -223,6 +225,26 @@ app.put<{ Params: { id: string } }>("/agents/:id/limits", async (req) => {
   }
   a.limits = limits; saveAgent(a);
   return publicAgent(a);
+});
+
+// Private balance of an agent's ring wallet. Only the agent itself may read it (amounts are private).
+app.get<{ Params: { id: string } }>("/agents/:id/balance", async (req) => {
+  const a = need(getAgent(req.params.id), "agent") as StoredAgent;
+  requireAgent(req, a.id);
+  return { agentId: a.id, shieldedAddress: a.shieldedAddress, asset: "USDC", balance: await ring.balance(a.keyId) };
+});
+
+// Withdraw from the agent's private balance to an ordinary Solana wallet. The withdrawal amount becomes public on-chain.
+app.post<{ Params: { id: string } }>("/agents/:id/withdraw", async (req, reply) => {
+  const a = need(getAgent(req.params.id), "agent") as StoredAgent;
+  requireAgent(req, a.id);
+  const body = z.object({
+    to: z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/, "to must be a Solana address"),
+    amount: z.number().positive().max(1e9),
+  }).strict().parse(req.body);
+  if ((await ring.balance(a.keyId)) < body.amount) throw new HttpError(402, "insufficient private balance");
+  const t = await ring.withdraw({ fromKeyId: a.keyId, to: body.to, amount: body.amount, memo: `spawnpad:withdraw:${a.id}` });
+  return reply.code(201).send({ signature: t.signature, to: body.to, amount: body.amount, asset: "USDC" });
 });
 
 app.get<{ Params: { id: string } }>("/agents/:id/bids", async (req) => {
